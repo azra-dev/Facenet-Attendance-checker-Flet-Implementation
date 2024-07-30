@@ -1,3 +1,4 @@
+from models.facenet_tensorflow import Facenet
 from flet import *
 import flet as ft
 import cv2
@@ -5,7 +6,8 @@ import numpy as np
 import base64
 import time
 import os
-from models.facenet_tensorflow import Facenet
+import csv
+from datetime import datetime
 
 cap = cv2.VideoCapture(0)
 deb_capt = False
@@ -14,7 +16,7 @@ FN = Facenet()
 def main(page:Page):
     page.update()
 
-    # Current Frame
+    # Current Frame -------------------
     captured_frame = ft.Image(
         src="placeholder.jpg",
         width=640,
@@ -22,7 +24,7 @@ def main(page:Page):
         fit=ft.ImageFit.CONTAIN
     )
 
-    # Iterating Capture Frames
+    # Iterating Capture Frames --------
     def capture_frame():
         cap = cv2.VideoCapture(0)
         clear_button.disabled = True
@@ -57,21 +59,23 @@ def main(page:Page):
             update_database_button.disabled = True
             clear_button.disabled = True
             page.update()
+
             if src_base64_img.startswith('data:image'):
                 src_base64_img = src_base64_img.split(',')[1]
+            
             img_data = base64.b64decode(src_base64_img)
             np_img = np.frombuffer(img_data, dtype=np.uint8)
             conv_img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
             cv2.imwrite('set_input/capture.png', conv_img)
-            print("capture!")
+
             FN.run_recognition()
-            print("finish capturing")
             show_result()
 
     def show_result():
         if os.path.exists("set_output/capture_recognition.png"):
             captured_frame.src = "set_output/capture_recognition.png"
             captured_frame.src_base64 = None
+
         capture_button.disabled = True
         update_database_button.disabled = True
         clear_button.disabled = False
@@ -100,10 +104,10 @@ def main(page:Page):
         capture_frame()
 
     # COMPONENTS
-    capture_button = ft.ElevatedButton("Recognize Face", on_click=trigger_capture, disabled=True)
+    capture_button = ft.ElevatedButton("Recognize Faces", on_click=trigger_capture, disabled=True)
     update_database_button = ft.ElevatedButton("Update Database", on_click=modify_database, disabled=True)
     clear_button = ft.ElevatedButton("Clear", on_click=clear, disabled=True)
-    
+
     control_rack = ft.Row([capture_button, update_database_button, clear_button], alignment=ft.MainAxisAlignment.CENTER)    
 
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER

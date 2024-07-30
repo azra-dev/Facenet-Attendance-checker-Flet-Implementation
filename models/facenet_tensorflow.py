@@ -6,6 +6,12 @@ import glob
 import pickle
 from mtcnn import MTCNN
 from scipy.spatial.distance import cosine
+import pandas as pd
+from datetime import datetime
+import sys
+sys.path.insert(0, './')
+
+from attendance_manager import edit_data
 
 class Facenet():
     def __init__(self, 
@@ -157,6 +163,19 @@ class Facenet():
         preprocessed_known_faces = [self.preprocess_face(face) for _, _, _, _, face in known_faces]
         self.known_embeddings = self.generate_embeddings(preprocessed_known_faces)
 
+        # update database
+        current_date = datetime.today().strftime('%Y-%m-%d')
+        student_data = {
+            'Name': self.known_labels,
+            f'{current_date}': [0] * len(self.known_labels),
+        }
+        df = pd.DataFrame(student_data)
+        csv_file_path = 'student_atendance_data.csv'
+        if os.path.exists(csv_file_path):
+            os.remove(csv_file_path)
+
+        df.to_csv(csv_file_path, index=False)
+
         with open(embeddings_file, 'wb') as f:
             pickle.dump(self.known_embeddings, f)
         with open(labels_file, 'wb') as f:
@@ -190,12 +209,15 @@ class Facenet():
                 for (startX, startY, endX, endY, _), (label, distance) in zip(faces, recognized_faces):
                     cv.rectangle(image, (startX, startY), (endX, endY), (0, 255, 0), 4)
                     cv.putText(image, f'{label} - {round(distance*100, 2)}%', (startX, startY - 10), cv.FONT_HERSHEY_SIMPLEX, 1.1, (0, 255, 0), 2)
+                    # register in attendance
+                    csv_file_path = "student_atendance_data.csv"
+                    current_date = datetime.today().strftime('%Y-%m-%d')
+                    edit_data(csv_file_path, f"{current_date}", label)
                 
                 cv.imwrite(f'{self.output}/{basename}_recognition{ext}', image)
             else:
                 print("No faces found. Repeating iteration.")
                 cv.imwrite(f'{self.output}/{basename}_recognition{ext}', image)
-            # fletm.show_result()
 
 
 def main():
